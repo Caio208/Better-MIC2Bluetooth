@@ -38,6 +38,7 @@ Requires JDK 17 and the Android SDK with `platforms;android-34` and `build-tools
 ```
 
 The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
+t
 
 ## License
 
