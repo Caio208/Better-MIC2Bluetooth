@@ -1,26 +1,29 @@
 package io.github.thrillfall.mic2bluetooth
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.MotionEvent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import io.github.thrillfall.mic2bluetooth.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityMainBinding
-    private val loopback by lazy { AudioLoopback(applicationContext) }
+    private lateinit var b: ActivityMainBinding
+    private lateinit var prefs: Prefs
     private var pendingMode: LoopbackMode? = null
-    private var pttHoldMode = false
+    private var createdWithMonet = false
 
     private val deviceCallback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) = updateOutputLabel()
@@ -32,165 +35,172 @@ class MainActivity : AppCompatActivity() {
     ) { results ->
         val mode = pendingMode
         pendingMode = null
-        if (results.values.all { it } && mode != null) {
-            startLoopback(mode)
+        // Notification permission is optional; only mic (and BT for the headset mic) are required
+        val required = results.filterKeys { it != Manifest.permission.POST_NOTIFICATIONS }
+        if (required.values.all { it } && mode != null) {
+            startLoopback()
         } else {
             setStatus(getString(R.string.status_permission_denied))
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Appearance.beforeCreate(this)
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        prefs = Prefs(this)
+        createdWithMonet = prefs.theme == Prefs.THEME_MONET
+        b = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(b.root)
 
-        binding.modeGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked) return@addOnButtonCheckedListener
-            val newHold = (checkedId == R.id.modeHold)
-            if (newHold != pttHoldMode) {
-                pttHoldMode = newHold
-                if (loopback.isRunning) stopLoopback()
-                applyButtonMode()
-                updateUi()
-            }
+        LoopbackService.gain = prefs.gain
+        LoopbackService.norm = prefs.normMode
+
+        // Amplification (live)
+        b.gainSlider.value = prefs.gain.coerceIn(1f, 10f)
+        b.gainLabel.text = getString(R.string.gain_label, b.gainSlider.value)
+        b.gainSlider.addOnChangeListener { _, value, _ ->
+            LoopbackService.gain = value
+            prefs.gain = value
+            b.gainLabel.text = getString(R.string.gain_label, value)
         }
-        binding.lowLatencySwitch.setOnCheckedChangeListener { _, _ ->
-            if (loopback.isRunning) stopLoopback()
+
+        // Volume normalization (live)
+        b.normGroup.check(
+            when (prefs.normMode) { 1 -> R.id.normSoft; 2 -> R.id.normStrong; else -> R.id.normOff }
+        )
+        b.normGroup.addOnButtonCheckedListener { _, id, checked ->
+            if (!checked) return@addOnButtonCheckedListener
+            val m = when (id) { R.id.normSoft -> 1; R.id.normStrong -> 2; else -> 0 }
+            LoopbackService.norm = m
+            prefs.normMode = m
+        }
+
+        // Headset microphone (needs a restart of the stream)
+        b.headsetSwitch.isChecked = prefs.headsetMic
+        b.headsetSwitch.setOnCheckedChangeListener { _, checked ->
+            prefs.headsetMic = checked
+            if (LoopbackService.running) stopLoopback()
             updateUi()
         }
-        applyButtonMode()
-        updateUi()
+
+        b.micButton.setOnClickListener {
+            if (LoopbackService.running) stopLoopback() else ensurePermissionAndStart()
+        }
+        b.settingsButton.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        if ((prefs.theme == Prefs.THEME_MONET) != createdWithMonet) {
+            recreate()
+            return
+        }
         val am = getSystemService(AUDIO_SERVICE) as AudioManager
         am.registerAudioDeviceCallback(deviceCallback, Handler(Looper.getMainLooper()))
-        updateOutputLabel()
+        LoopbackService.onStateChange = { err ->
+            if (err != null) setStatus(getString(R.string.status_error, err))
+            updateUi(keepStatus = err != null)
+        }
+        applyLook()
+        updateUi()
     }
 
     override fun onPause() {
         super.onPause()
+        LoopbackService.onStateChange = null
         val am = getSystemService(AUDIO_SERVICE) as AudioManager
         am.unregisterAudioDeviceCallback(deviceCallback)
     }
 
-    override fun onStop() {
-        super.onStop()
-        stopLoopback()
-    }
+    /** Colors, background image and mic button style from the saved settings. */
+    private fun applyLook() {
+        val pal = Appearance.applyBackground(this, b.root, b.bgImage, b.bgDim)
+        Appearance.setupWindow(this, b.content, pal.on)
 
-    private fun applyButtonMode() {
-        if (pttHoldMode) {
-            binding.micButton.setOnClickListener(null)
-            binding.micButton.setOnTouchListener { v, ev ->
-                when (ev.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> {
-                        v.performClick()
-                        v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(80).start()
-                        ensurePermissionAndStart()
-                        true
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        v.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
-                        stopLoopback()
-                        true
-                    }
-                    else -> false
-                }
-            }
-        } else {
-            binding.micButton.setOnTouchListener(null)
-            binding.micButton.setOnClickListener {
-                if (loopback.isRunning) stopLoopback() else ensurePermissionAndStart()
-            }
+        listOf(b.outputLabel, b.statusLabel, b.gainLabel, b.normLabel).forEach { it.setTextColor(pal.on) }
+        b.settingsButton.imageTintList = ColorStateList.valueOf(pal.on)
+
+        val accent = ColorStateList.valueOf(pal.accent)
+        b.gainSlider.trackActiveTintList = accent
+        b.gainSlider.thumbTintList = accent
+        b.gainSlider.haloTintList = accent
+        b.gainSlider.trackInactiveTintList = ColorStateList.valueOf(ColorUtils.setAlphaComponent(pal.on, 60))
+
+        b.headsetSwitch.setTextColor(pal.on)
+        b.headsetSwitch.thumbTintList = Appearance.stateList(pal.accent, Color.parseColor("#9E9E9E"))
+        b.headsetSwitch.trackTintList = Appearance.stateList(
+            ColorUtils.setAlphaComponent(pal.accent, 110),
+            ColorUtils.setAlphaComponent(pal.on, 50)
+        )
+
+        listOf(b.normOff, b.normSoft, b.normStrong).forEach {
+            it.setTextColor(pal.on)
+            it.strokeColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(pal.on, 120))
+            it.backgroundTintList = Appearance.stateList(
+                ColorUtils.setAlphaComponent(pal.accent, 100), Color.TRANSPARENT
+            )
         }
     }
 
     private fun selectedMode(): LoopbackMode =
-        if (binding.lowLatencySwitch.isChecked) LoopbackMode.SCO_LOW_LATENCY
-        else LoopbackMode.A2DP_HIGH_QUALITY
+        if (b.headsetSwitch.isChecked) LoopbackMode.HEADSET_MIC else LoopbackMode.PHONE_MIC
 
     private fun ensurePermissionAndStart() {
         val mode = selectedMode()
         val needed = mutableListOf(Manifest.permission.RECORD_AUDIO)
-        if (mode == LoopbackMode.SCO_LOW_LATENCY) {
-            needed += Manifest.permission.BLUETOOTH_CONNECT
-        }
+        if (mode == LoopbackMode.HEADSET_MIC) needed += Manifest.permission.BLUETOOTH_CONNECT
+        if (Build.VERSION.SDK_INT >= 33) needed += Manifest.permission.POST_NOTIFICATIONS
         val missing = needed.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
         if (missing.isEmpty()) {
-            startLoopback(mode)
+            startLoopback()
         } else {
             pendingMode = mode
             requestPermissions.launch(missing.toTypedArray())
         }
     }
 
-    private fun startLoopback(mode: LoopbackMode) {
-        loopback.start(mode) { msg ->
-            runOnUiThread {
-                setStatus(getString(R.string.status_error, msg))
-                updateUi()
-            }
-        }
-        updateUi()
+    private fun startLoopback() {
+        val intent = Intent(this, LoopbackService::class.java)
+            .putExtra(LoopbackService.EXTRA_MODE, selectedMode().name)
+            .putExtra(LoopbackService.EXTRA_RAW, prefs.rawMic)
+        ContextCompat.startForegroundService(this, intent)
     }
 
     private fun stopLoopback() {
-        loopback.stop()
-        updateUi()
+        stopService(Intent(this, LoopbackService::class.java))
     }
 
-    private fun updateUi() {
-        val running = loopback.isRunning
-        val tint = ContextCompat.getColor(
-            this, if (running) R.color.mic_red_active else R.color.mic_red_idle
-        )
-        binding.micButton.backgroundTintList = ColorStateList.valueOf(tint)
-
-        binding.hintText.setText(
-            when {
-                running && pttHoldMode -> R.string.hint_active_hold
-                running -> R.string.hint_active
-                pttHoldMode -> R.string.hint_hold
-                else -> R.string.hint_tap
-            }
-        )
-
-        setStatus(
-            if (running) getString(R.string.status_running)
-            else getString(R.string.status_idle)
-        )
+    private fun updateUi(keepStatus: Boolean = false) {
+        Appearance.styleMicButton(b.micButton, prefs, LoopbackService.running)
+        if (!keepStatus) {
+            setStatus(
+                getString(if (LoopbackService.running) R.string.status_running else R.string.status_idle)
+            )
+        }
         updateOutputLabel()
     }
 
     private fun updateOutputLabel() {
         val am = getSystemService(AUDIO_SERVICE) as AudioManager
-        val devices = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-        val mode = selectedMode()
-        val match = if (mode == LoopbackMode.SCO_LOW_LATENCY) {
-            devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
-        } else {
-            devices.firstOrNull {
-                it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
-                it.type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
-                it.type == AudioDeviceInfo.TYPE_BLE_SPEAKER
-            }
-        }
-        val label = if (match != null) {
-            val profile = if (mode == LoopbackMode.SCO_LOW_LATENCY) "SCO" else "A2DP"
-            getString(R.string.output_bluetooth, "${match.productName ?: "Bluetooth"} ($profile)")
-        } else if (mode == LoopbackMode.SCO_LOW_LATENCY) {
-            getString(R.string.output_none_sco)
-        } else {
+        val out = Routing.headphoneOutput(am)
+        b.outputLabel.text = if (out == null) {
             getString(R.string.output_none)
+        } else {
+            val kind = when {
+                out.type == AudioDeviceInfo.TYPE_USB_HEADSET || out.type == AudioDeviceInfo.TYPE_USB_DEVICE ->
+                    getString(R.string.kind_usb)
+                Routing.isWired(out) -> getString(R.string.kind_wired)
+                else -> getString(R.string.kind_bluetooth)
+            }
+            getString(R.string.output_device, out.productName ?: "—", kind)
         }
-        binding.outputLabel.text = label
     }
 
     private fun setStatus(text: String) {
-        binding.statusLabel.text = text
+        b.statusLabel.text = text
     }
 }
