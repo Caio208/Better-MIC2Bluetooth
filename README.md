@@ -1,45 +1,28 @@
-# Mic2Bluetooth
+# Ampliely
 
-Stream your Android phone's microphone live to a connected Bluetooth speaker, headset, or earbuds.
+Amplificador de som ao vivo para Android: capta o microfone do celular e toca nos seus fones (Bluetooth, com fio ou USB-C) com o mínimo de atraso possível.
 
-Useful for turning a phone into a wireless mic into a BT speaker — small public speaking, field recording monitor, hearing assistance, etc.
+Feito para brincar de "super ouvido", ouvir de longe, ASMR e assistir aula.
 
-## Features
+## Recursos
 
-- **A2DP mode (default):** routes mic audio as media to any paired Bluetooth speaker. ~150–250 ms latency, full audio bandwidth.
-- **SCO low-latency mode:** routes via the Bluetooth HFP profile to headsets/earbuds. ~40–80 ms latency, narrowband speech quality. Pure speakers without a mic profile won't appear.
-- **Toggle / Hold-to-speak:** tap the big red button to keep streaming, or hold it for push-to-talk.
-- Auto-detects when a Bluetooth device connects/disconnects while the app is open.
+- Microfone do celular → fones, em qualidade total (sem filtros, sem redução de ruído).
+- Opção de usar o microfone do fone (com fio, USB ou Bluetooth).
+- Amplificação de 1x a 10x, ajustada ao vivo.
+- Normalização de volume (Suave / Forte): se um som alto surgir de repente, ele é reduzido ao nível anterior e depois volta ao normal.
+- Funciona com a tela apagada, na tela de bloqueio e em segundo plano (notificação "Ampliando…" com botão "Parar").
+- Personalização: tema padrão, AMOLED, cores do sistema (Monet) ou manual; imagem de fundo; cor, formato e tamanho do botão.
+- Trava de segurança: não liga sem fones conectados e para se eles forem desconectados (evita microfonia).
 
-## Requirements
+## Requisitos
 
-- Android 12 (API 31) or newer.
+- Android 12 (API 31) ou mais novo.
 
-## Permissions
+## Créditos
 
-| Permission | Why |
-|---|---|
-| `RECORD_AUDIO` | Capture from the microphone. |
-| `MODIFY_AUDIO_SETTINGS` | Switch audio routing modes. |
-| `BLUETOOTH_CONNECT` | Required only when low-latency (SCO) mode is enabled, to route to a Bluetooth communication device. |
+- Baseado no projeto [mic2bluetooth](https://github.com/thrillfall/mic2bluetooth), de thrillfall (GPL-3.0-or-later).
+- Desenvolvido com a ajuda do Claude, da Anthropic.
 
-The app does not access the network, contacts, location, or any other data.
+## Licença
 
-## Build from source
-
-Requires JDK 17 and the Android SDK with `platforms;android-34` and `build-tools;34.0.0+`.
-
-```sh
-./gradlew assembleDebug
-# or, for a signed release:
-./gradlew assembleRelease \
-  -PreleaseStoreFile=/path/to/release.jks \
-  -PreleaseStorePassword=… -PreleaseKeyAlias=… -PreleaseKeyPassword=…
-```
-
-The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
-t
-
-## License
-
-[GPL-3.0-or-later](LICENSE).
+GPL-3.0-or-later (a mesma do projeto original).
