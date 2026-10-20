@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Mic2Bluetooth" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:fontFamily">@font/helvetica_neue_medium</item>
+        <item name="fontFamily">@font/helvetica_neue_medium</item>
+    </style>
+</resources>

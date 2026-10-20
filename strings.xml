@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ampliely</string>
+
+    <string name="status_idle">Parado</string>
+    <string name="status_running">Ampliando…</string>
+    <string name="status_permission_denied">Permissão negada</string>
+    <string name="status_error">Erro: %1$s</string>
+
+    <string name="output_none">Nenhum fone detectado — conecte fones (com fio, USB ou Bluetooth)</string>
+    <string name="output_device">Saída: %1$s (%2$s)</string>
+    <string name="kind_wired">fio</string>
+    <string name="kind_usb">USB</string>
+    <string name="kind_bluetooth">Bluetooth</string>
+
+    <string name="mic_button_desc">Ligar/desligar amplificação</string>
+    <string name="settings_desc">Configurações</string>
+    <string name="gain_label">Amplificação: %1$.1fx</string>
+    <string name="norm_label">Normalização de volume</string>
+    <string name="norm_label_active">Normalização · −%1$.0f dB</string>
+    <string name="norm_off">Desligada</string>
+    <string name="norm_soft">Suave</string>
+    <string name="norm_strong">Forte</string>
+    <string name="headset_mic_label">Usar microfone do fone (com fio ou Bluetooth)</string>
+
+    <string name="notif_channel">Amplificador ao vivo</string>
+    <string name="notif_title">Ampliando…</string>
+    <string name="notif_stop">Parar</string>
+
+    <string name="err_no_headphones">Conecte fones (com fio, USB ou Bluetooth) antes de ligar. Sem fones, o som sairia no alto-falante e causaria microfonia.</string>
+    <string name="err_no_headset_mic">Nenhum microfone de fone encontrado (com fio, USB ou Bluetooth).</string>
+    <string name="err_sco">Não consegui ativar o microfone do fone Bluetooth</string>
+    <string name="err_headphones_gone">Fones desconectados — parei para evitar microfonia.</string>
+
+    <string name="settings_title">Configurações</string>
+    <string name="sec_theme">Tema</string>
+    <string name="theme_default">Padrão</string>
+    <string name="theme_amoled">AMOLED</string>
+    <string name="theme_monet">Monet</string>
+    <string name="theme_manual">Manual</string>
+    <string name="pick_bg_color">Cor do fundo</string>
+    <string name="pick_accent">Cor de destaque</string>
+    <string name="sec_background">Fundo</string>
+    <string name="wallpaper_label">Usar o papel de parede do celular</string>
+    <string name="pick_monet">Monet</string>
+    <string name="sec_waves">Ondas</string>
+    <string name="waves_label">Ondas que reagem ao som</string>
+    <string name="pick_wave_color">Cor das ondas</string>
+    <string name="pick_image">Escolher imagem</string>
+    <string name="remove_image">Remover</string>
+    <string name="image_error">Não consegui usar essa imagem</string>
+    <string name="dim_label">Escurecer imagem: %1$d%%</string>
+    <string name="sec_button">Botão do microfone</string>
+    <string name="pick_button_color">Cor do botão</string>
+    <string name="shape_circle">Círculo</string>
+    <string name="shape_rounded">Arredondado</string>
+    <string name="shape_square">Quadrado</string>
+    <string name="size_label">Tamanho do botão: %1$d dp</string>
+    <string name="sec_capture">Captação</string>
+    <string name="raw_label">Captação crua (sem processamento do Android)</string>
+    <string name="raw_hint">Usa a fonte UNPROCESSED do microfone: sem controle automático de ganho, sem redução de ruído. Fica mais baixa, então use a amplificação. Se o celular não suportar, volta ao modo normal. Vale para a próxima vez que ligar.</string>
+</resources>
